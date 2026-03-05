@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Quản lý dữ liệu GCN</title>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<style>
+
+body{
+font-family:Arial;
+margin:40px;
+background:#f5f6fa;
+}
+
+h1{
+color:#333;
+}
+
+input{
+padding:8px;
+margin:5px;
+}
+
+button{
+padding:8px 12px;
+background:#1976d2;
+border:none;
+color:white;
+cursor:pointer;
+}
+
+button:hover{
+background:#125aa3;
+}
+
+table{
+border-collapse:collapse;
+width:100%;
+background:white;
+margin-top:20px;
+}
+
+th,td{
+border:1px solid #ddd;
+padding:8px;
+}
+
+th{
+background:#1976d2;
+color:white;
+}
+
+.form-box{
+background:white;
+padding:15px;
+margin-bottom:20px;
+border-radius:6px;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>Quản lý dữ liệu GCN</h1>
+
+<div id="loginBox">
+
+<h3>Đăng nhập</h3>
+
+<input id="email" placeholder="Email"><br>
+<input id="password" type="password" placeholder="Mật khẩu"><br>
+
+<button onclick="login()">Đăng nhập</button>
+
+</div>
+
+<div id="app" style="display:none">
+
+<div class="form-box">
+
+<h3>Thêm dữ liệu</h3>
+
+<input id="stt" placeholder="STT">
+<input id="ten" placeholder="Tên">
+<input id="so_phat_hanh" placeholder="Số phát hành">
+<input id="so_vao_so" placeholder="Số vào sổ">
+
+<button onclick="addData()">Lưu</button>
+
+</div>
+
+<input id="search" placeholder="Tìm kiếm...">
+
+<table>
+
+<thead>
+<tr>
+<th>STT</th>
+<th>Tên</th>
+<th>Số phát hành</th>
+<th>Số vào sổ</th>
+<th>Hành động</th>
+</tr>
+</thead>
+
+<tbody id="tableBody"></tbody>
+
+</table>
+
+</div>
+
+<script>
+
+// ====== THAY THÔNG TIN SUPABASE ======
+
+const SUPABASE_URL="https://nujriavvxlnxieeminqw.supabase.co"
+const SUPABASE_KEY="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im51anJpYXZ2eGxueGllZW1pbnF3Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI3MTc5MDQsImV4cCI6MjA4ODI5MzkwNH0.MZk3da7WpOTZ8zeEdLZvzrgV5wjE1diWL6kNOA7sCDM"
+
+// =====================================
+
+const supabaseClient = supabase.createClient(SUPABASE_URL,SUPABASE_KEY)
+
+let cache=[]
+
+
+// LOGIN
+async function login(){
+
+const email=document.getElementById("email").value
+const password=document.getElementById("password").value
+
+const {data,error}=await supabaseClient.auth.signInWithPassword({
+email:email,
+password:password
+})
+
+if(error){
+alert("Đăng nhập thất bại")
+console.log(error)
+return
+}
+
+document.getElementById("loginBox").style.display="none"
+document.getElementById("app").style.display="block"
+
+loadData()
+
+}
+
+
+// LOAD DATA
+async function loadData(){
+
+const {data,error}=await supabaseClient
+.from("so_cap_gcn")
+.select("*")
+.order("stt")
+
+if(error){
+console.log(error)
+return
+}
+
+cache=data
+
+render(data)
+
+}
+
+
+// RENDER TABLE
+function render(data){
+
+const table=document.getElementById("tableBody")
+
+table.innerHTML=""
+
+data.forEach(row=>{
+
+const tr=document.createElement("tr")
+
+tr.innerHTML=`
+
+<td>${row.stt||""}</td>
+<td>${row.ten||""}</td>
+<td>${row.so_phat_hanh||""}</td>
+<td>${row.so_vao_so||""}</td>
+
+<td>
+
+<button onclick="editRow(${row.id})">Sửa</button>
+<button onclick="deleteRow(${row.id})">Xóa</button>
+
+</td>
+
+`
+
+table.appendChild(tr)
+
+})
+
+}
+
+
+// ADD DATA
+async function addData(){
+
+const stt=document.getElementById("stt").value
+const ten=document.getElementById("ten").value
+const so_phat_hanh=document.getElementById("so_phat_hanh").value
+const so_vao_so=document.getElementById("so_vao_so").value
+
+await supabaseClient
+.from("so_cap_gcn")
+.insert([{stt,ten,so_phat_hanh,so_vao_so}])
+
+loadData()
+
+}
+
+
+// DELETE
+async function deleteRow(id){
+
+if(!confirm("Xóa dữ liệu?")) return
+
+await supabaseClient
+.from("so_cap_gcn")
+.delete()
+.eq("id",id)
+
+loadData()
+
+}
+
+
+// EDIT
+async function editRow(id){
+
+const newName=prompt("Tên mới")
+
+if(!newName) return
+
+await supabaseClient
+.from("so_cap_gcn")
+.update({ten:newName})
+.eq("id",id)
+
+loadData()
+
+}
+
+
+// SEARCH
+document.getElementById("search").addEventListener("input",function(){
+
+const keyword=this.value.toLowerCase()
+
+const filtered=cache.filter(x=>
+(x.ten||"").toLowerCase().includes(keyword)||
+(x.so_phat_hanh||"").toLowerCase().includes(keyword)
+)
+
+render(filtered)
+
+})
+
+</script>
+
+</body>
+</html>
